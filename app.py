@@ -52,19 +52,28 @@ with st.sidebar:
         st.rerun()
 
 # ── 페이지 네비게이션 ─────────────────────────────────────────────
-pages = [
-    st.Page("views/page_00_home.py", title="홈 · 핵심개념", icon="🏠", default=True),
-    st.Page("views/page_01_diagnosis.py", title="경로 진단(해산 vs 파산)", icon="🧭"),
-    st.Page("views/page_02_roadmap.py", title="전체 일정 로드맵", icon="🗓️"),
-    st.Page("views/page_03_closure.py", title="① 의료기관 폐업", icon="🏥"),
-    st.Page("views/page_04_liquidation.py", title="② 해산·청산 절차", icon="⚖️"),
-    st.Page("views/page_05_bankruptcy.py", title="③ 파산 절차", icon="🏛️"),
-    st.Page("views/page_06_hr.py", title="④ 인사·노무 정리", icon="👥"),
-    st.Page("views/page_07_tax.py", title="⑤ 세무·보험·행정", icon="🧾"),
-    st.Page("views/page_08_risk.py", title="최종 리스크 체크리스트", icon="🚨"),
-    st.Page("views/page_09_templates.py", title="문서 템플릿 생성", icon="📄"),
-    st.Page("views/page_10_ai_report.py", title="AI 종합진단 · 리포트", icon="🤖"),
-]
+pages = {
+    "공통": [
+        st.Page("views/page_00_home.py", title="홈 · 핵심개념 · 트랙 선택", icon="🏠", default=True),
+        st.Page("views/page_02_roadmap.py", title="전체 일정 로드맵", icon="🗓️"),
+        st.Page("views/page_03_closure.py", title="① 의료기관 폐업", icon="🏥"),
+        st.Page("views/page_06_hr.py", title="④ 인사·노무 정리", icon="👥"),
+        st.Page("views/page_07_tax.py", title="⑤ 세무·보험·행정", icon="🧾"),
+        st.Page("views/page_08_risk.py", title="최종 리스크 체크리스트", icon="🚨"),
+        st.Page("views/page_09_templates.py", title="문서 템플릿 생성", icon="📄"),
+        st.Page("views/page_10_ai_report.py", title="AI 종합진단 · 리포트", icon="🤖"),
+    ],
+    "🏛️ 의료법인 트랙 (해산·파산)": [
+        st.Page("views/page_01_diagnosis.py", title="법인 경로 진단(해산 vs 파산)", icon="🧭"),
+        st.Page("views/page_04_liquidation.py", title="② 해산·청산 절차", icon="⚖️"),
+        st.Page("views/page_05_bankruptcy.py", title="③ 파산 절차", icon="🏛️"),
+    ],
+    "🧑‍⚕️ 개인 병의원 트랙 (개인회생·파산)": [
+        st.Page("views/page_11_individual_overview.py", title="개인 병의원 개요·진단", icon="🧭"),
+        st.Page("views/page_12_individual_rehab.py", title="개인회생 절차", icon="📈"),
+        st.Page("views/page_13_individual_bankruptcy.py", title="개인파산·면책 절차", icon="🧾"),
+    ],
+}
 
 nav = st.navigation(pages, position="sidebar")
 nav.run()

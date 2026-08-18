@@ -88,6 +88,47 @@ def financial_diagnosis(total_assets, total_liabilities, monthly_cash_in, monthl
     }
 
 
+def individual_path_diagnosis(total_assets, total_debt, monthly_income, monthly_living_cost, has_stable_income: bool):
+    """
+    개인(원장 개인 명의) 채무 상황 기반 개인회생 vs 개인파산 참고 진단.
+    청산가치 보장 원칙(변제총액 ≥ 청산가치)을 단순화하여 반영.
+    반환: dict(monthly_available, est_rehab_total_36, est_rehab_total_60, liquidation_value,
+               rehab_feasible, recommended_path)
+    """
+    assets = D(total_assets)
+    debt = D(total_debt)
+    income = D(monthly_income)
+    living_cost = D(monthly_living_cost)
+
+    monthly_available = income - living_cost  # 월 가용소득(변제 재원)
+    liquidation_value = max(assets, Decimal("0"))  # 단순화된 청산가치(=처분 가능 재산)
+
+    est_rehab_total_36 = max(monthly_available, Decimal("0")) * Decimal("36")
+    est_rehab_total_60 = max(monthly_available, Decimal("0")) * Decimal("60")
+
+    # 청산가치 보장 원칙: 변제총액(60개월 기준)이 청산가치 이상이어야 개인회생 인가 가능성 높음
+    meets_liquidation_value = est_rehab_total_60 >= liquidation_value
+
+    rehab_feasible = bool(has_stable_income) and monthly_available > 0 and meets_liquidation_value
+
+    if rehab_feasible:
+        recommended_path = "individual_rehab"
+    elif monthly_available <= 0 or not has_stable_income:
+        recommended_path = "individual_bankruptcy"
+    else:
+        recommended_path = "review"
+
+    return {
+        "monthly_available": monthly_available,
+        "liquidation_value": liquidation_value,
+        "est_rehab_total_36": round2(est_rehab_total_36),
+        "est_rehab_total_60": round2(est_rehab_total_60),
+        "meets_liquidation_value": meets_liquidation_value,
+        "rehab_feasible": rehab_feasible,
+        "recommended_path": recommended_path,
+    }
+
+
 def checklist_progress(checked_ids: set, checklist_def: dict):
     """특정 체크리스트(dict of groups)의 진행률(전체/critical) 계산."""
     total, done = 0, 0

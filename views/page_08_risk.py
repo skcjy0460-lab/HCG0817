@@ -1,30 +1,49 @@
 import streamlit as st
 import plotly.graph_objects as go
 from lib import styles, state
-from lib.calculations import checklist_progress, overall_risk_score, financial_diagnosis
+from lib.calculations import checklist_progress, overall_risk_score, financial_diagnosis, individual_path_diagnosis
 from lib.checklist_data import CHECKLISTS
+
+org_type = st.session_state.get("org_type", "corporation")
+is_individual = org_type == "individual"
 
 styles.hero(
     "최종 리스크 체크리스트 & 종합 스코어",
     "5개 영역의 이행 현황과 재무 리스크, 금지행위 해당여부를 종합하여 하나의 리스크 스코어로 산출합니다.",
-    eyebrow="종합 대시보드",
+    eyebrow="종합 대시보드 (" + ("개인 병의원 트랙" if is_individual else "의료법인 트랙") + ")",
 )
 
-# 전체 진행률 취합
-labels = {"closure": "① 의료기관 폐업", "liquidation": "② 해산·청산", "bankruptcy": "③ 파산",
-          "hr": "④ 인사·노무", "tax": "⑤ 세무·보험·행정"}
+# 전체 진행률 취합 (트랙에 따라 해산·청산/파산 또는 개인회생/개인파산 체크리스트를 사용)
+if is_individual:
+    labels = {"closure": "① 의료기관 폐업", "individual_rehab": "② 개인회생", "individual_bankruptcy": "③ 개인파산·면책",
+              "hr": "④ 인사·노무", "tax": "⑤ 세무·보험·행정"}
+else:
+    labels = {"closure": "① 의료기관 폐업", "liquidation": "② 해산·청산", "bankruptcy": "③ 파산",
+              "hr": "④ 인사·노무", "tax": "⑤ 세무·보험·행정"}
 all_progress = {}
-for key, cl in CHECKLISTS.items():
+for key, label in labels.items():
     checked = state.get_checked_set(key)
-    all_progress[labels[key]] = checklist_progress(checked, cl)
+    all_progress[label] = checklist_progress(checked, CHECKLISTS[key])
 
-fin = st.session_state.get("financial_inputs", {})
-fin_result = financial_diagnosis(
-    fin.get("total_assets", 0), fin.get("total_liabilities", 0),
-    fin.get("monthly_cash_in", 0), fin.get("monthly_cash_out", 0),
-)
+if is_individual:
+    ind = st.session_state.get("individual_inputs", {})
+    ind_result = individual_path_diagnosis(
+        ind.get("total_assets", 0), ind.get("total_debt", 0),
+        ind.get("monthly_income", 0), ind.get("monthly_living_cost", 0),
+        ind.get("has_stable_income", True),
+    )
+    fin_risk_level = "critical" if ind_result["recommended_path"] == "individual_bankruptcy" and ind_result["monthly_available"] <= 0 else \
+                      ("high" if ind_result["recommended_path"] == "review" else "normal")
+else:
+    fin = st.session_state.get("financial_inputs", {})
+    fin_result = financial_diagnosis(
+        fin.get("total_assets", 0), fin.get("total_liabilities", 0),
+        fin.get("monthly_cash_in", 0), fin.get("monthly_cash_out", 0),
+    )
+    fin_risk_level = fin_result["risk_level"]
+
 forbidden_flags = st.session_state.get("forbidden_flags", {})
-risk = overall_risk_score(all_progress, fin_result["risk_level"], forbidden_flags)
+risk = overall_risk_score(all_progress, fin_risk_level, forbidden_flags)
 
 styles.section_title("종합 리스크 게이지")
 gauge_col, kpi_col = st.columns([1.3, 1])
@@ -51,7 +70,7 @@ with gauge_col:
     st.plotly_chart(fig, use_container_width=True)
 with kpi_col:
     styles.kpi("종합 리스크 등급", risk["label"], f"스코어 {risk['score']}/100", risk["color"])
-    styles.kpi("재무 리스크", fin_result["risk_level"].upper())
+    styles.kpi("재무 리스크", fin_risk_level.upper())
     hit_count = sum(1 for v in forbidden_flags.values() if v)
     styles.kpi("금지행위 자가진단 적발", f"{hit_count}건", "0건이 정상" if hit_count == 0 else "즉시 전문가 상담 필요",
                "#2E6B4F" if hit_count == 0 else "#B0413E")
@@ -70,10 +89,10 @@ styles.section_title("🚨 최종 리스크 체크리스트", "실행 직전, �
 
 final_checks = {
     "경로 선택 및 절차": [
-        "채무초과·영업불능 여부 판단 완료 (파산 경로 필요성 검토)",
-        "파산 인지 후 특정 채권자만 변제하거나 자산 임의 처분 금지 확인",
-        "이사회 결의(해산 또는 파산) 완료 및 회의록 보관",
-        "주무관청(청산) 또는 법원(파산) 서류 제출 일정 확정",
+        "채무초과·영업불능(또는 개인 채무초과) 여부 판단 완료",
+        "특정 채권자만 변제하거나 재산 임의 처분·이전 금지 확인",
+        "이사회 결의(해산 또는 파산) 완료 및 회의록 보관" if not is_individual else "개인회생/개인파산 신청서 및 첨부서류 최종 점검 완료",
+        "주무관청(청산) 또는 법원(파산) 서류 제출 일정 확정" if not is_individual else "법원 제출 서류 및 신청 일정 확정",
     ],
     "의료기관 폐업 및 환자 보호": [
         "폐업일 확정 및 보건소 신고 완료",

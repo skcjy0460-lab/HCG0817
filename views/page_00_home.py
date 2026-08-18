@@ -1,12 +1,58 @@
 import streamlit as st
 from lib import styles
-from lib.content_data import CORE_CONCEPTS, DECISION_STEPS, GLOSSARY, FAQ, RISK_WARNINGS
+from lib.content_data import CORE_CONCEPTS, DECISION_STEPS, GLOSSARY, FAQ, RISK_WARNINGS, ENTITY_COMPARISON
 
 styles.hero(
-    "의료재단(의료법인) 및 의료기관<br>폐업·해산·파산 실무 가이드",
+    "의료법인·의료기관 및 개인 병의원<br>폐업·해산·파산·개인회생 실무 가이드",
     "자본잠식·채무초과·영업불능 상황까지 포함한 일정별 실행 체크리스트 · "
     "재무진단부터 AI 종합진단, 문서 자동생성까지 한 번에 관리하는 프리미엄 컨설팅 도구입니다.",
 )
+
+styles.section_title("가장 먼저 확인하세요: 어떤 트랙에 해당하나요?", "운영 형태에 따라 적용되는 절차와 법률이 완전히 다릅니다.")
+
+org_type_labels = {"corporation": "의료법인(재단) — 이사회·해산·청산·법인파산 트랙", "individual": "개인사업자 병의원(원장 개인 명의) — 폐업신고·개인회생·개인파산 트랙"}
+current_type = st.session_state.get("org_type")
+sel = st.radio(
+    "운영 형태를 선택하세요",
+    options=["corporation", "individual"],
+    format_func=lambda x: org_type_labels[x],
+    index=["corporation", "individual"].index(current_type) if current_type in ["corporation", "individual"] else 0,
+    horizontal=False,
+)
+st.session_state["org_type"] = sel
+
+if sel == "corporation":
+    st.success("👉 사이드바에서 **'경로 진단' → '② 해산·청산 절차' / '③ 파산 절차'** 메뉴를 이용하세요.")
+else:
+    st.success("👉 사이드바에서 **'⑥ 개인 병의원 트랙' 섹션의 '개인 병의원 개요' → '개인회생' / '개인파산·면책'** 메뉴를 이용하세요.")
+
+with st.expander("법인 vs 개인사업자 — 무엇이 다른가요? (비교표 펼쳐보기)"):
+    rows_html = ""
+    for row in ENTITY_COMPARISON:
+        rows_html += f"""
+        <tr>
+          <td style="padding:9px 10px;border-bottom:1px solid #E4DFD4;font-weight:700;color:#0F1B2D;white-space:nowrap;">{row['item']}</td>
+          <td style="padding:9px 10px;border-bottom:1px solid #E4DFD4;color:#1C2733;">{row['corp']}</td>
+          <td style="padding:9px 10px;border-bottom:1px solid #E4DFD4;color:#1C2733;">{row['individual']}</td>
+        </tr>
+        """
+    st.markdown(
+        f"""
+        <table style="width:100%;border-collapse:collapse;background:#fff;border:1px solid #E4DFD4;font-size:13px;">
+          <thead>
+            <tr style="background:#F3F0E8;">
+              <th style="text-align:left;padding:9px 10px;">구분</th>
+              <th style="text-align:left;padding:9px 10px;">의료법인(재단)</th>
+              <th style="text-align:left;padding:9px 10px;">개인사업자 병의원</th>
+            </tr>
+          </thead>
+          <tbody>{rows_html}</tbody>
+        </table>
+        """,
+        unsafe_allow_html=True,
+    )
+
+st.write("")
 
 c1, c2, c3 = st.columns(3)
 with c1:

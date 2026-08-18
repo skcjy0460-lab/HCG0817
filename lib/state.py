@@ -11,13 +11,21 @@ from datetime import datetime
 DEFAULTS = {
     "checked_items": {},          # {checklist_key: set(item_ids)}
     "org_name": "",
+    "org_type": None,             # "corporation"(의료법인) | "individual"(개인사업자) | None
     "financial_inputs": {
         "total_assets": 0,
         "total_liabilities": 0,
         "monthly_cash_in": 0,
         "monthly_cash_out": 0,
     },
-    "selected_path": None,        # "liquidation" | "bankruptcy" | None
+    "individual_inputs": {
+        "total_assets": 0,
+        "total_debt": 0,
+        "monthly_income": 0,
+        "monthly_living_cost": 0,
+        "has_stable_income": True,
+    },
+    "selected_path": None,        # "liquidation" | "bankruptcy" | "individual_rehab" | "individual_bankruptcy" | None
     "forbidden_flags": {
         "편파변제 의심 정황": False,
         "관재인/청산인 승인 없는 자산 처분 이력": False,
@@ -37,7 +45,8 @@ def init_state():
     for key, default in DEFAULTS.items():
         if key not in st.session_state:
             st.session_state[key] = json.loads(json.dumps(default)) if isinstance(default, (dict, list)) else default
-    for cl_key in ["closure", "liquidation", "bankruptcy", "hr", "tax"]:
+    for cl_key in ["closure", "liquidation", "bankruptcy", "hr", "tax",
+                   "individual_rehab", "individual_bankruptcy"]:
         st.session_state["checked_items"].setdefault(cl_key, [])
 
 
@@ -58,8 +67,10 @@ def export_state_json() -> str:
     payload = {
         "exported_at": datetime.now().isoformat(),
         "org_name": st.session_state.get("org_name", ""),
+        "org_type": st.session_state.get("org_type"),
         "checked_items": st.session_state.get("checked_items", {}),
         "financial_inputs": st.session_state.get("financial_inputs", {}),
+        "individual_inputs": st.session_state.get("individual_inputs", {}),
         "selected_path": st.session_state.get("selected_path"),
         "forbidden_flags": st.session_state.get("forbidden_flags", {}),
         "hr_rows": st.session_state.get("hr_rows", []),
@@ -73,7 +84,7 @@ def export_state_json() -> str:
 
 def import_state_json(raw: str):
     data = json.loads(raw)
-    for key in ["org_name", "checked_items", "financial_inputs", "selected_path",
+    for key in ["org_name", "org_type", "checked_items", "financial_inputs", "individual_inputs", "selected_path",
                 "forbidden_flags", "hr_rows", "extra_note", "ai_result",
                 "ai_model_used", "template_field_values"]:
         if key in data and data[key] is not None:
